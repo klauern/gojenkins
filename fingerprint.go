@@ -93,3 +93,16 @@ func (f FingerPrint) Poll() (int, error) {
 	}
 	return response.StatusCode, nil
 }
+
+// Verify FingerPrint
+func (c *Client) ValidateFingerPrint(id string) (bool, error) {
+	fp := FingerPrint{Client: c, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
+	valid, err := fp.Valid()
+	if err != nil {
+		return false, err
+	}
+	if valid {
+		return true, nil
+	}
+	return false, nil
+}

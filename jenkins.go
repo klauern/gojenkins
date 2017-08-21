@@ -217,19 +217,6 @@ func (c *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	return fp.GetInfo()
 }
 
-// Verify FingerPrint
-func (c *Client) ValidateFingerPrint(id string) (bool, error) {
-	fp := FingerPrint{Client: c, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
-	valid, err := fp.Valid()
-	if err != nil {
-		return false, err
-	}
-	if valid {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (c *Client) Poll() (int, error) {
 	resp, err := c.Requester.GetJSON("/", c.Raw, nil)
 	if err != nil {
