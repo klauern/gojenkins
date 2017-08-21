@@ -221,7 +221,7 @@ func (j *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
 // Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
 func (j *Client) GetPlugins(depth int) (*Plugins, error) {
-	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
+	p := Plugins{Client: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
 	_, err := p.Poll()
 	if err != nil {
 		return nil, err
