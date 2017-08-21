@@ -18,6 +18,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type Folder struct {
@@ -74,3 +75,30 @@ func (f *Folder) Poll() (int, error) {
 	}
 	return response.StatusCode, nil
 }
+
+
+// Create a new folder
+// This folder can be nested in other parent folders
+// Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
+func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) {
+	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
+	folder, err := folderObj.Create(name)
+	if err != nil {
+		return nil, err
+	}
+	return folder, nil
+}
+
+
+func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
+	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
+	status, err := folder.Poll()
+	if err != nil {
+		return nil, fmt.Errorf("trouble polling folder: %v", err)
+	}
+	if status == 200 {
+		return &folder, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+

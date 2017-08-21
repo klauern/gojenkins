@@ -14,9 +14,10 @@
 
 package gojenkins
 
-import "errors"
-
-// Nodes
+import (
+	"errors"
+	"strconv"
+)
 
 type Computers struct {
 	BusyExecutors  int             `json:"busyExecutors"`
@@ -227,4 +228,83 @@ func (n *Node) GetLogText() (string, error) {
 	}
 
 	return log, nil
+}
+
+// Create a new Node
+// Can be JNLPLauncher or SSHLauncher
+// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
+// By Default JNLPLauncher is created
+// Multiple labels should be separated by blanks
+func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
+	params := map[string]string{"method": "JNLPLauncher"}
+
+	if len(options) > 0 {
+		params, _ = options[0].(map[string]string)
+	}
+
+	if _, ok := params["method"]; !ok {
+		params["method"] = "JNLPLauncher"
+	}
+
+	method := params["method"]
+	var launcher map[string]string
+	switch method {
+	case "":
+		fallthrough
+	case "JNLPLauncher":
+		launcher = map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"}
+	case "SSHLauncher":
+		launcher = map[string]string{
+			"stapler-class":        "hudson.plugins.sshslaves.SSHLauncher",
+			"$class":               "hudson.plugins.sshslaves.SSHLauncher",
+			"host":                 params["host"],
+			"port":                 params["port"],
+			"credentialsId":        params["credentialsId"],
+			"jvmOptions":           params["jvmOptions"],
+			"javaPath":             params["javaPath"],
+			"prefixStartSlaveCmd":  params["prefixStartSlaveCmd"],
+			"suffixStartSlaveCmd":  params["suffixStartSlaveCmd"],
+			"maxNumRetries":        params["maxNumRetries"],
+			"retryWaitTime":        params["retryWaitTime"],
+			"launchTimeoutSeconds": params["launchTimeoutSeconds"],
+			"type":                 "hudson.slaves.DumbSlave",
+			"stapler-class-bag":    "true"}
+	default:
+		return nil, errors.New("launcher method not supported")
+	}
+
+	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
+	MODE := "NORMAL"
+	qr := map[string]string{
+		"name": name,
+		"type": NODE_TYPE,
+		"json": makeJson(map[string]interface{}{
+			"name":               name,
+			"nodeDescription":    description,
+			"remoteFS":           remoteFS,
+			"numExecutors":       numExecutors,
+			"mode":               MODE,
+			"type":               NODE_TYPE,
+			"labelString":        label,
+			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
+			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
+			"launcher":           launcher,
+		}),
+	}
+
+	resp, err := j.Requester.Post("/computer/doCreateItem", nil, nil, qr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 400 {
+		_, err := node.Poll()
+		if err != nil {
+			return nil, err
+		}
+		return node, nil
+	}
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }

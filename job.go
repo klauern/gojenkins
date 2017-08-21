@@ -524,3 +524,97 @@ func (j *Job) History() ([]*History, error) {
 	}
 	return parseBuildHistory(resp.Body), nil
 }
+
+// Create a new job in the folder
+// Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
+func (j *Jenkins) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
+	qr := map[string]string{
+		"name": jobName,
+	}
+	job, err := jobObj.Create(config, qr)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+// Create a new job from config File
+// Method takes XML string as first parameter, and if the name is not specified in the config file
+// takes name as string as second parameter
+// e.g jenkins.CreateJob("<config></config>","newJobName")
+func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error) {
+	qr := make(map[string]string)
+	if len(options) > 0 {
+		qr["name"] = options[0].(string)
+	} else {
+		return nil, errors.New("Error Creating Job, job name is missing")
+	}
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
+	job, err := jobObj.Create(config, qr)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+// Rename a job.
+// First parameter job old name, Second parameter job new name.
+func (j *Jenkins) RenameJob(job string, name string) *Job {
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
+	jobObj.Rename(name)
+	return &jobObj
+}
+
+// Create a copy of a job.
+// First parameter Name of the job to copy from, Second parameter new job name.
+func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
+	_, err := job.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return job.Copy(newName)
+}
+
+// Delete a job.
+func (j *Jenkins) DeleteJob(name string) (bool, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	return job.Delete()
+}
+
+// Invoke a job.
+// First parameter job name, second parameter is optional Build parameters.
+func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	var params map[string]string
+	if len(options) > 0 {
+		params, _ = options[0].(map[string]string)
+	}
+	return job.InvokeSimple(params)
+}
+
+func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
+	status, err := job.Poll()
+	if err != nil {
+		return nil, err
+	}
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
+func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
+	status, err := job.Poll()
+	if err != nil {
+		return nil, fmt.Errorf("trouble polling job: %v", err)
+	}
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
