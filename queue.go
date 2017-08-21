@@ -19,9 +19,9 @@ import (
 )
 
 type Queue struct {
-	Jenkins *Client
-	Raw     *queueResponse
-	Base    string
+	Client *Client
+	Raw    *queueResponse
+	Base   string
 }
 
 type queueResponse struct {
@@ -61,7 +61,7 @@ type generalAction struct {
 func (q *Queue) Tasks() []*Task {
 	tasks := make([]*Task, len(q.Raw.Items))
 	for i, t := range q.Raw.Items {
-		tasks[i] = &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+		tasks[i] = &Task{Jenkins: q.Client, Queue: q, Raw: &t}
 	}
 	return tasks
 }
@@ -69,7 +69,7 @@ func (q *Queue) Tasks() []*Task {
 func (q *Queue) GetTaskById(id int64) *Task {
 	for _, t := range q.Raw.Items {
 		if t.ID == id {
-			return &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+			return &Task{Jenkins: q.Client, Queue: q, Raw: &t}
 		}
 	}
 	return nil
@@ -79,7 +79,7 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 	tasks := make([]*Task, 0)
 	for _, t := range q.Raw.Items {
 		if t.Task.Name == name {
-			tasks = append(tasks, &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t})
+			tasks = append(tasks, &Task{Jenkins: q.Client, Queue: q, Raw: &t})
 		}
 	}
 	return tasks
@@ -128,7 +128,7 @@ func (t *Task) GetCauses() []map[string]interface{} {
 }
 
 func (q *Queue) Poll() (int, error) {
-	response, err := q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
+	response, err := q.Client.Requester.GetJSON(q.Base, q.Raw, nil)
 	if err != nil {
 		return 0, err
 	}

@@ -200,7 +200,7 @@ func (j *Client) GetAllJobs() ([]*Job, error) {
 
 // Returns a Queue
 func (j *Client) GetQueue() (*Queue, error) {
-	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
+	q := &Queue{Client: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	_, err := q.Poll()
 	if err != nil {
 		return nil, err
