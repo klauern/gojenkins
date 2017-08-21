@@ -23,7 +23,7 @@ import (
 
 type Folder struct {
 	Raw     *FolderResponse
-	Jenkins *Jenkins
+	Jenkins *Client
 	Base    string
 }
 
@@ -80,7 +80,7 @@ func (f *Folder) Poll() (int, error) {
 // Create a new folder
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
-func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) {
+func (j *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
 	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
 	folder, err := folderObj.Create(name)
 	if err != nil {
@@ -90,7 +90,7 @@ func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) 
 }
 
 
-func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
+func (j *Client) GetFolder(id string, parents ...string) (*Folder, error) {
 	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
 	status, err := folder.Poll()
 	if err != nil {

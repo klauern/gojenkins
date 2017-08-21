@@ -26,7 +26,7 @@ import (
 
 // Represents an Artifact
 type Artifact struct {
-	Jenkins  *Jenkins
+	Jenkins  *Client
 	Build    *Build
 	FileName string
 	Path     string

@@ -19,7 +19,7 @@ import (
 )
 
 type Plugins struct {
-	Jenkins *Jenkins
+	Jenkins *Client
 	Raw     *PluginResponse
 	Base    string
 	Depth   int

@@ -20,7 +20,7 @@ import (
 )
 
 type FingerPrint struct {
-	Jenkins *Jenkins
+	Jenkins *Client
 	Base    string
 	Id      string
 	Raw     *FingerPrintResponse

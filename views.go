@@ -21,7 +21,7 @@ import (
 
 type View struct {
 	Raw     *ViewResponse
-	Jenkins *Jenkins
+	Jenkins *Client
 	Base    string
 }
 

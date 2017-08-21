@@ -16,7 +16,7 @@ package gojenkins
 
 type Label struct {
 	Raw     *LabelResponse
-	Jenkins *Jenkins
+	Jenkins *Client
 	Base    string
 }
 

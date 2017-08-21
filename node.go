@@ -27,9 +27,9 @@ type Computers struct {
 }
 
 type Node struct {
-	Raw     *NodeResponse
-	Jenkins *Jenkins
-	Base    string
+	Raw    *NodeResponse
+	Client *Client
+	Base   string
 }
 
 type NodeResponse struct {
@@ -93,7 +93,7 @@ func (n *Node) GetName() string {
 }
 
 func (n *Node) Delete() (bool, error) {
-	resp, err := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+	resp, err := n.Client.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -166,7 +166,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	_, err = n.Jenkins.Requester.Post(n.Base+"/toggleOffline", nil, nil, qr)
+	_, err = n.Client.Requester.Post(n.Base+"/toggleOffline", nil, nil, qr)
 	if err != nil {
 		return false, err
 	}
@@ -181,7 +181,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 }
 
 func (n *Node) Poll() (int, error) {
-	response, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
+	response, err := n.Client.Requester.GetJSON(n.Base, n.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -193,7 +193,7 @@ func (n *Node) LaunchNodeBySSH() (int, error) {
 		"json":   "",
 		"Submit": "Launch slave agent",
 	}
-	response, err := n.Jenkins.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
+	response, err := n.Client.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
@@ -206,7 +206,7 @@ func (n *Node) Disconnect() (int, error) {
 		"json":           makeJson(map[string]string{"offlineMessage": ""}),
 		"Submit":         "Yes",
 	}
-	response, err := n.Jenkins.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
+	response, err := n.Client.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
@@ -216,13 +216,13 @@ func (n *Node) Disconnect() (int, error) {
 func (n *Node) GetLogText() (string, error) {
 	var log string
 
-	_, err := n.Jenkins.Requester.Post(n.Base+"/log", nil, nil, nil)
+	_, err := n.Client.Requester.Post(n.Base+"/log", nil, nil, nil)
 	if err != nil {
 		return "", err
 	}
 
 	qr := map[string]string{"start": "0"}
-	_, err = n.Jenkins.Requester.GetJSON(n.Base+"/logText/progressiveHtml/", &log, qr)
+	_, err = n.Client.Requester.GetJSON(n.Base+"/logText/progressiveHtml/", &log, qr)
 	if err != nil {
 		return "", nil
 	}
@@ -235,7 +235,7 @@ func (n *Node) GetLogText() (string, error) {
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
-func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
+func (j *Client) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
 	params := map[string]string{"method": "JNLPLauncher"}
 
 	if len(options) > 0 {
@@ -273,7 +273,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		return nil, errors.New("launcher method not supported")
 	}
 
-	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	node := &Node{Client: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{

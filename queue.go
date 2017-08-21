@@ -19,7 +19,7 @@ import (
 )
 
 type Queue struct {
-	Jenkins *Jenkins
+	Jenkins *Client
 	Raw     *queueResponse
 	Base    string
 }
@@ -30,7 +30,7 @@ type queueResponse struct {
 
 type Task struct {
 	Raw     *taskResponse
-	Jenkins *Jenkins
+	Jenkins *Client
 	Queue   *Queue
 }
 

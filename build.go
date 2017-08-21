@@ -26,7 +26,7 @@ import (
 type Build struct {
 	Raw     *BuildResponse
 	Job     *Job
-	Jenkins *Jenkins
+	Jenkins *Client
 	Base    string
 	Depth   int
 }

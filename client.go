@@ -18,7 +18,7 @@ const (
 
 )
 
-// JenkinsServer represents the Jenkins server itself.  This information is requested at
+// JenkinsServer represents the Client server itself.  This information is requested at
 // the JENKINS_BASE url '/api/json'.
 type JenkinsServer struct {
 	HudsonVersion        string
@@ -62,13 +62,6 @@ type csrfProtectionSettings struct {
 	CrumbRequestField string `json:"crumbRequestField"`
 }
 
-type Client struct {
-	auth       *Authentication
-	HTTPClient *http.Client
-	Log        *logrus.Logger
-	BaseURL    string
-}
-
 type Authentication struct {
 	Username      string
 	Password      string
@@ -87,7 +80,7 @@ func NewClient(auth *Authentication) (*Client, error) {
 	return client, nil
 }
 
-// Information returns basic information about the Jenkins server itself.
+// Information returns basic information about the Client server itself.
 func (c *Client) Information() (*JenkinsServer, error) {
 	resp, err := c.HTTPClient.Get(c.BaseURL + DefaultAPISuffix)
 	if err != nil {

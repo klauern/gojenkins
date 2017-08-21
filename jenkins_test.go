@@ -10,13 +10,13 @@ import (
 )
 
 var (
-	jenkins *Jenkins
+	jenkins *Client
 )
 
 func TestInit(t *testing.T) {
 	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
 	_, err := jenkins.Init()
-	assert.Nil(t, err, "Jenkins Initialization should not fail")
+	assert.Nil(t, err, "Client Initialization should not fail")
 }
 
 func TestCreateJobs(t *testing.T) {

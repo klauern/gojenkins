@@ -17,12 +17,13 @@ package gojenkins
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Basic Authentication
@@ -31,11 +32,15 @@ type BasicAuth struct {
 	Password string
 }
 
-type Jenkins struct {
-	Server    string
-	Version   string
-	Raw       *ExecutorResponse
-	Requester *Requester
+type Client struct {
+	auth       *Authentication
+	HTTPClient *http.Client
+	Log        *logrus.Logger
+	BaseURL    string
+	Server     string
+	Version    string
+	Raw        *ExecutorResponse
+	Requester  *Requester
 }
 
 // Loggers
@@ -45,10 +50,10 @@ var (
 	Error   *log.Logger
 )
 
-// Init Method. Should be called after creating a Jenkins Instance.
+// Init Method. Should be called after creating a Client Instance.
 // e.g jenkins := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
-func (j *Jenkins) Init() (*Jenkins, error) {
+func (j *Client) Init() (*Client, error) {
 	j.initLoggers()
 
 	// Check Connection
@@ -66,7 +71,7 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	return j, nil
 }
 
-func (j *Jenkins) initLoggers() {
+func (j *Client) initLoggers() {
 	Info = log.New(os.Stdout,
 		"INFO: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
@@ -81,7 +86,7 @@ func (j *Jenkins) initLoggers() {
 }
 
 // Get Basic Information About Jenkins
-func (j *Jenkins) Info() (*ExecutorResponse, error) {
+func (j *Client) Info() (*ExecutorResponse, error) {
 	_, err := j.Requester.Get("/", j.Raw, nil)
 
 	if err != nil {
@@ -90,9 +95,8 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 	return j.Raw, nil
 }
 
-
-func (j *Jenkins) GetNode(name string) (*Node, error) {
-	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+func (j *Client) GetNode(name string) (*Node, error) {
+	node := Node{Client: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	status, err := node.Poll()
 	if err != nil {
 		return nil, err
@@ -103,7 +107,7 @@ func (j *Jenkins) GetNode(name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
-func (j *Jenkins) GetLabel(name string) (*Label, error) {
+func (j *Client) GetLabel(name string) (*Label, error) {
 	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
 	status, err := label.Poll()
 	if err != nil {
@@ -115,7 +119,7 @@ func (j *Jenkins) GetLabel(name string) (*Label, error) {
 	return nil, errors.New("No label found")
 }
 
-func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
+func (j *Client) GetBuild(jobName string, number int64) (*Build, error) {
 	job, err := j.GetJob(jobName)
 	if err != nil {
 		return nil, err
@@ -128,7 +132,7 @@ func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	return build, nil
 }
 
-func (j *Jenkins) GetAllNodes() ([]*Node, error) {
+func (j *Client) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
 
 	qr := map[string]string{
@@ -142,7 +146,7 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = &Node{Jenkins: j, Raw: node, Base: "/computer/" + node.DisplayName}
+		nodes[i] = &Node{Client: j, Raw: node, Base: "/computer/" + node.DisplayName}
 	}
 
 	return nodes, nil
@@ -152,7 +156,7 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
+func (j *Client) GetAllBuildIds(job string) ([]JobBuild, error) {
 	jobObj, err := j.GetJob(job)
 	if err != nil {
 		return nil, err
@@ -162,7 +166,7 @@ func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
 
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
-func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
+func (j *Client) GetAllJobNames() ([]InnerJob, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
@@ -175,7 +179,7 @@ func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 
 // Get All Possible Job Objects.
 // Each job will be queried.
-func (j *Jenkins) GetAllJobs() ([]*Job, error) {
+func (j *Client) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
@@ -195,7 +199,7 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 }
 
 // Returns a Queue
-func (j *Jenkins) GetQueue() (*Queue, error) {
+func (j *Client) GetQueue() (*Queue, error) {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	_, err := q.Poll()
 	if err != nil {
@@ -204,19 +208,19 @@ func (j *Jenkins) GetQueue() (*Queue, error) {
 	return q, nil
 }
 
-func (j *Jenkins) GetQueueUrl() string {
+func (j *Client) GetQueueUrl() string {
 	return "/queue"
 }
 
 // Get Artifact data by Hash
-func (j *Jenkins) GetArtifactData(id string) (*FingerPrintResponse, error) {
+func (j *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	return fp.GetInfo()
 }
 
 // Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
-func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
+func (j *Client) GetPlugins(depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
 	_, err := p.Poll()
 	if err != nil {
@@ -227,7 +231,7 @@ func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 
 // Check if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
-func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
+func (j *Client) HasPlugin(name string) (*Plugin, error) {
 	p, err := j.GetPlugins(1)
 
 	if err != nil {
@@ -237,7 +241,7 @@ func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 }
 
 // Verify FingerPrint
-func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
+func (j *Client) ValidateFingerPrint(id string) (bool, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	valid, err := fp.Valid()
 	if err != nil {
@@ -249,7 +253,7 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 	return false, nil
 }
 
-func (j *Jenkins) GetView(name string) (*View, error) {
+func (j *Client) GetView(name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
 	_, err := view.Poll()
@@ -259,7 +263,7 @@ func (j *Jenkins) GetView(name string) (*View, error) {
 	return &view, nil
 }
 
-func (j *Jenkins) GetAllViews() ([]*View, error) {
+func (j *Client) GetAllViews() ([]*View, error) {
 	_, err := j.Poll()
 	if err != nil {
 		return nil, err
@@ -281,7 +285,7 @@ func (j *Jenkins) GetAllViews() ([]*View, error) {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
+func (j *Client) CreateView(name string, viewType string) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
@@ -305,7 +309,7 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
-func (j *Jenkins) Poll() (int, error) {
+func (j *Client) Poll() (int, error) {
 	resp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err != nil {
 		return 0, err
@@ -313,11 +317,11 @@ func (j *Jenkins) Poll() (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
+// Creates a new Client Instance
 // Optional parameters are: client, username, password
 // After creating an instance call init method.
-func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
-	j := &Jenkins{}
+func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Client {
+	j := &Client{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
