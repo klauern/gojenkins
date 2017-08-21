@@ -293,7 +293,7 @@ func (b *Build) GetAllFingerPrints() []*FingerPrint {
 	b.Poll(3)
 	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
 	for i, f := range b.Raw.FingerPrint {
-		result[i] = &FingerPrint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
+		result[i] = &FingerPrint{Client: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
 	}
 	return result
 }
@@ -415,7 +415,7 @@ func (b *Build) GetRevisionBranch() string {
 }
 
 func (b *Build) IsGood() bool {
-	return (!b.IsRunning() && b.Raw.Result == STATUS_SUCCESS)
+	return !b.IsRunning() && b.Raw.Result == STATUS_SUCCESS
 }
 
 func (b *Build) IsRunning() bool {

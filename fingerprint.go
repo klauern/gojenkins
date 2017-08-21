@@ -20,10 +20,10 @@ import (
 )
 
 type FingerPrint struct {
-	Jenkins *Client
-	Base    string
-	Id      string
-	Raw     *FingerPrintResponse
+	Client *Client
+	Base   string
+	Id     string
+	Raw    *FingerPrintResponse
 }
 
 type FingerPrintResponse struct {
@@ -87,7 +87,7 @@ func (f FingerPrint) GetInfo() (*FingerPrintResponse, error) {
 }
 
 func (f FingerPrint) Poll() (int, error) {
-	response, err := f.Jenkins.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
+	response, err := f.Client.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
 	if err != nil {
 		return 0, err
 	}

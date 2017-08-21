@@ -214,7 +214,7 @@ func (j *Client) GetQueueUrl() string {
 
 // Get Artifact data by Hash
 func (j *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
-	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
+	fp := FingerPrint{Client: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	return fp.GetInfo()
 }
 
@@ -242,7 +242,7 @@ func (j *Client) HasPlugin(name string) (*Plugin, error) {
 
 // Verify FingerPrint
 func (j *Client) ValidateFingerPrint(id string) (bool, error) {
-	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
+	fp := FingerPrint{Client: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	valid, err := fp.Valid()
 	if err != nil {
 		return false, err
