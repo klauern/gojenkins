@@ -92,3 +92,59 @@ func (v *View) Poll() (int, error) {
 	}
 	return response.StatusCode, nil
 }
+
+func (c *Client) GetView(name string) (*View, error) {
+	url := "/view/" + name
+	view := View{Client: c, Raw: new(ViewResponse), Base: url}
+	_, err := view.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return &view, nil
+}
+
+func (c *Client) GetAllViews() ([]*View, error) {
+	_, err := c.Poll()
+	if err != nil {
+		return nil, err
+	}
+	views := make([]*View, len(c.Raw.Views))
+	for i, v := range c.Raw.Views {
+		views[i], _ = c.GetView(v.Name)
+	}
+	return views, nil
+}
+
+// Create View
+// First Parameter - name of the View
+// Second parameter - Type
+// Possible Types:
+// 		gojenkins.LIST_VIEW
+// 		gojenkins.NESTED_VIEW
+// 		gojenkins.MY_VIEW
+// 		gojenkins.DASHBOARD_VIEW
+// 		gojenkins.PIPELINE_VIEW
+// Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
+func (c *Client) CreateView(name string, viewType string) (*View, error) {
+	view := &View{Client: c, Raw: new(ViewResponse), Base: "/view/" + name}
+	endpoint := "/createView"
+	data := map[string]string{
+		"name":   name,
+		"mode":   viewType,
+		"Submit": "OK",
+		"json": makeJson(map[string]string{
+			"name": name,
+			"mode": viewType,
+		}),
+	}
+	r, err := c.Requester.Post(endpoint, nil, view.Raw, data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if r.StatusCode == 200 {
+		return c.GetView(name)
+	}
+	return nil, errors.New(strconv.Itoa(r.StatusCode))
+}
