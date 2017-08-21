@@ -26,9 +26,9 @@ import (
 )
 
 type Job struct {
-	Raw     *JobResponse
-	Jenkins *Client
-	Base    string
+	Raw    *JobResponse
+	Client *Client
+	Base   string
 }
 
 type JobBuild struct {
@@ -69,18 +69,18 @@ type JobResponse struct {
 		IconUrl       string `json:"iconUrl"`
 		Score         int64  `json:"score"`
 	} `json:"healthReport"`
-	InQueue               bool     `json:"inQueue"`
-	KeepDependencies      bool     `json:"keepDependencies"`
-	LastBuild             JobBuild `json:"lastBuild"`
-	LastCompletedBuild    JobBuild `json:"lastCompletedBuild"`
-	LastFailedBuild       JobBuild `json:"lastFailedBuild"`
-	LastStableBuild       JobBuild `json:"lastStableBuild"`
-	LastSuccessfulBuild   JobBuild `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
-	Name                  string   `json:"name"`
-	SubJobs               []InnerJob    `json:"jobs"`
-	NextBuildNumber       int64    `json:"nextBuildNumber"`
+	InQueue               bool       `json:"inQueue"`
+	KeepDependencies      bool       `json:"keepDependencies"`
+	LastBuild             JobBuild   `json:"lastBuild"`
+	LastCompletedBuild    JobBuild   `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild   `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild   `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild   `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild   `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild   `json:"lastUnsuccessfulBuild"`
+	Name                  string     `json:"name"`
+	SubJobs               []InnerJob `json:"jobs"`
+	NextBuildNumber       int64      `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
@@ -116,7 +116,7 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
+	build := Build{Jenkins: j.Client, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (j *Job) getBuildByType(buildType string) (*Build, error) {
 		panic("No Such Build")
 	}
 	build := Build{
-		Jenkins: j.Jenkins,
+		Jenkins: j.Client,
 		Depth:   1,
 		Job:     j,
 		Raw:     new(BuildResponse),
@@ -187,7 +187,7 @@ func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	var buildsResp struct {
 		Builds []JobBuild `json:"allBuilds"`
 	}
-	_, err := j.Jenkins.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
+	_, err := j.Client.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (j *Job) GetDownstreamJobsMetadata() []InnerJob {
 func (j *Job) GetSubJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.SubJobs))
 	for i, job := range j.Raw.SubJobs {
-		ji, err := j.Jenkins.GetSubJob(j.GetName(), job.Name)
+		ji, err := j.Client.GetSubJob(j.GetName(), job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +225,7 @@ func (j *Job) GetInnerJobsMetadata() []InnerJob {
 func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
 	for i, job := range j.Raw.UpstreamProjects {
-		ji, err := j.Jenkins.GetJob(job.Name)
+		ji, err := j.Client.GetJob(job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +237,7 @@ func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
 	for i, job := range j.Raw.DownstreamProjects {
-		ji, err := j.Jenkins.GetJob(job.Name)
+		ji, err := j.Client.GetJob(job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 }
 
 func (j *Job) GetInnerJob(id string) (*Job, error) {
-	job := Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: j.Base + "/job/" + id}
+	job := Job{Client: j.Client, Raw: new(JobResponse), Base: j.Base + "/job/" + id}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (j *Job) GetInnerJobs() ([]*Job, error) {
 }
 
 func (j *Job) Enable() (bool, error) {
-	resp, err := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
+	resp, err := j.Client.Requester.Post(j.Base+"/enable", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -282,7 +282,7 @@ func (j *Job) Enable() (bool, error) {
 }
 
 func (j *Job) Disable() (bool, error) {
-	resp, err := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
+	resp, err := j.Client.Requester.Post(j.Base+"/disable", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -293,7 +293,7 @@ func (j *Job) Disable() (bool, error) {
 }
 
 func (j *Job) Delete() (bool, error) {
-	resp, err := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
+	resp, err := j.Client.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -306,7 +306,7 @@ func (j *Job) Delete() (bool, error) {
 func (j *Job) Rename(name string) (bool, error) {
 	data := url.Values{}
 	data.Set("newName", name)
-	_, err := j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
+	_, err := j.Client.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -318,7 +318,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	if len(qr) > 0 {
 		querystring = qr[0].(map[string]string)
 	}
-	resp, err := j.Jenkins.Requester.PostXML(j.parentBase()+"/createItem", config, j.Raw, querystring)
+	resp, err := j.Client.Requester.PostXML(j.parentBase()+"/createItem", config, j.Raw, querystring)
 	if err != nil {
 		return nil, err
 	}
@@ -331,12 +331,12 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 
 func (j *Job) Copy(destinationName string) (*Job, error) {
 	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
-	resp, err := j.Jenkins.Requester.Post(j.parentBase()+"/createItem", nil, nil, qr)
+	resp, err := j.Client.Requester.Post(j.parentBase()+"/createItem", nil, nil, qr)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: "/job/" + destinationName}
+		newJob := &Job{Client: j.Client, Raw: new(JobResponse), Base: "/job/" + destinationName}
 		_, err := newJob.Poll()
 		if err != nil {
 			return nil, err
@@ -350,7 +350,7 @@ func (j *Job) UpdateConfig(config string) error {
 
 	var querystring map[string]string
 
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/config.xml", config, nil, querystring)
+	resp, err := j.Client.Requester.PostXML(j.Base+"/config.xml", config, nil, querystring)
 	if err != nil {
 		return err
 	}
@@ -364,7 +364,7 @@ func (j *Job) UpdateConfig(config string) error {
 
 func (j *Job) GetConfig() (string, error) {
 	var data string
-	_, err := j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
+	_, err := j.Client.Requester.GetXML(j.Base+"/config.xml", &data, nil)
 	if err != nil {
 		return "", err
 	}
@@ -434,7 +434,7 @@ func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
 	for k, v := range params {
 		data.Set(k, v)
 	}
-	resp, err := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
+	resp, err := j.Client.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -499,7 +499,7 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 
 	buildParams["json"] = string(makeJson(params))
 	b, _ := json.Marshal(buildParams)
-	resp, err := j.Jenkins.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files)
+	resp, err := j.Client.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files)
 	if err != nil {
 		return false, err
 	}
@@ -510,7 +510,7 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 }
 
 func (j *Job) Poll() (int, error) {
-	response, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
+	response, err := j.Client.Requester.GetJSON(j.Base, j.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -518,7 +518,7 @@ func (j *Job) Poll() (int, error) {
 }
 
 func (j *Job) History() ([]*History, error) {
-	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
+	resp, err := j.Client.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -528,7 +528,7 @@ func (j *Job) History() ([]*History, error) {
 // Create a new job in the folder
 // Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
 func (j *Client) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
-	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
+	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
 	qr := map[string]string{
 		"name": jobName,
 	}
@@ -550,7 +550,7 @@ func (j *Client) CreateJob(config string, options ...interface{}) (*Job, error) 
 	} else {
 		return nil, errors.New("Error Creating Job, job name is missing")
 	}
-	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
+	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
 	job, err := jobObj.Create(config, qr)
 	if err != nil {
 		return nil, err
@@ -561,7 +561,7 @@ func (j *Client) CreateJob(config string, options ...interface{}) (*Job, error) 
 // Rename a job.
 // First parameter job old name, Second parameter job new name.
 func (j *Client) RenameJob(job string, name string) *Job {
-	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
+	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
@@ -569,7 +569,7 @@ func (j *Client) RenameJob(job string, name string) *Job {
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Client) CopyJob(copyFrom string, newName string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
+	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
 	_, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -579,14 +579,14 @@ func (j *Client) CopyJob(copyFrom string, newName string) (*Job, error) {
 
 // Delete a job.
 func (j *Client) DeleteJob(name string) (bool, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
 func (j *Client) BuildJob(name string, options ...interface{}) (int64, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
@@ -595,7 +595,7 @@ func (j *Client) BuildJob(name string, options ...interface{}) (int64, error) {
 }
 
 func (j *Client) GetJob(id string, parentIDs ...string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
+	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -607,7 +607,7 @@ func (j *Client) GetJob(id string, parentIDs ...string) (*Job, error) {
 }
 
 func (j *Client) GetSubJob(parentId string, childId string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
+	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling job: %v", err)
@@ -617,4 +617,3 @@ func (j *Client) GetSubJob(parentId string, childId string) (*Job, error) {
 	}
 	return nil, errors.New(strconv.Itoa(status))
 }
-
