@@ -108,7 +108,7 @@ func (j *Client) GetNode(name string) (*Node, error) {
 }
 
 func (j *Client) GetLabel(name string) (*Label, error) {
-	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
+	label := Label{Client: j, Raw: new(LabelResponse), Base: "/label/" + name}
 	status, err := label.Poll()
 	if err != nil {
 		return nil, err

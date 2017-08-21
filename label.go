@@ -15,9 +15,9 @@
 package gojenkins
 
 type Label struct {
-	Raw     *LabelResponse
-	Jenkins *Client
-	Base    string
+	Raw    *LabelResponse
+	Client *Client
+	Base   string
 }
 
 type MODE string
@@ -54,7 +54,7 @@ func (l *Label) GetNodes() []LabelNode {
 }
 
 func (l *Label) Poll() (int, error) {
-	response, err := l.Jenkins.Requester.GetJSON(l.Base, l.Raw, nil)
+	response, err := l.Client.Requester.GetJSON(l.Base, l.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
