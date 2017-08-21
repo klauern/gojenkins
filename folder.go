@@ -22,9 +22,9 @@ import (
 )
 
 type Folder struct {
-	Raw     *FolderResponse
-	Jenkins *Client
-	Base    string
+	Raw    *FolderResponse
+	Client *Client
+	Base   string
 }
 
 type FolderResponse struct {
@@ -57,7 +57,7 @@ func (f *Folder) Create(name string) (*Folder, error) {
 			"mode": mode,
 		}),
 	}
-	r, err := f.Jenkins.Requester.Post(f.parentBase()+"/createItem", nil, f.Raw, data)
+	r, err := f.Client.Requester.Post(f.parentBase()+"/createItem", nil, f.Raw, data)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (f *Folder) Create(name string) (*Folder, error) {
 }
 
 func (f *Folder) Poll() (int, error) {
-	response, err := f.Jenkins.Requester.GetJSON(f.Base, f.Raw, nil)
+	response, err := f.Client.Requester.GetJSON(f.Base, f.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -81,7 +81,7 @@ func (f *Folder) Poll() (int, error) {
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
 func (j *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
-	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
+	folderObj := &Folder{Client: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
 	folder, err := folderObj.Create(name)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (j *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
 
 
 func (j *Client) GetFolder(id string, parents ...string) (*Folder, error) {
-	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
+	folder := Folder{Client: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
 	status, err := folder.Poll()
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling folder: %v", err)
