@@ -53,25 +53,25 @@ var (
 // Init Method. Should be called after creating a Client Instance.
 // e.g jenkins := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
-func (j *Client) Init() (*Client, error) {
-	j.initLoggers()
+func (c *Client) Init() (*Client, error) {
+	c.initLoggers()
 
 	// Check Connection
-	j.Raw = new(ExecutorResponse)
-	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+	c.Raw = new(ExecutorResponse)
+	rsp, err := c.Requester.GetJSON("/", c.Raw, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	j.Version = rsp.Header.Get("X-Jenkins")
-	if j.Raw == nil {
+	c.Version = rsp.Header.Get("X-Jenkins")
+	if c.Raw == nil {
 		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
 	}
 
-	return j, nil
+	return c, nil
 }
 
-func (j *Client) initLoggers() {
+func (c *Client) initLoggers() {
 	Info = log.New(os.Stdout,
 		"INFO: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
@@ -86,17 +86,17 @@ func (j *Client) initLoggers() {
 }
 
 // Get Basic Information About Jenkins
-func (j *Client) Info() (*ExecutorResponse, error) {
-	_, err := j.Requester.Get("/", j.Raw, nil)
+func (c *Client) Info() (*ExecutorResponse, error) {
+	_, err := c.Requester.Get("/", c.Raw, nil)
 
 	if err != nil {
 		return nil, err
 	}
-	return j.Raw, nil
+	return c.Raw, nil
 }
 
-func (j *Client) GetNode(name string) (*Node, error) {
-	node := Node{Client: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+func (c *Client) GetNode(name string) (*Node, error) {
+	node := Node{Client: c, Raw: new(NodeResponse), Base: "/computer/" + name}
 	status, err := node.Poll()
 	if err != nil {
 		return nil, err
@@ -107,8 +107,8 @@ func (j *Client) GetNode(name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
-func (j *Client) GetLabel(name string) (*Label, error) {
-	label := Label{Client: j, Raw: new(LabelResponse), Base: "/label/" + name}
+func (c *Client) GetLabel(name string) (*Label, error) {
+	label := Label{Client: c, Raw: new(LabelResponse), Base: "/label/" + name}
 	status, err := label.Poll()
 	if err != nil {
 		return nil, err
@@ -119,8 +119,8 @@ func (j *Client) GetLabel(name string) (*Label, error) {
 	return nil, errors.New("No label found")
 }
 
-func (j *Client) GetBuild(jobName string, number int64) (*Build, error) {
-	job, err := j.GetJob(jobName)
+func (c *Client) GetBuild(jobName string, number int64) (*Build, error) {
+	job, err := c.GetJob(jobName)
 	if err != nil {
 		return nil, err
 	}
@@ -132,21 +132,21 @@ func (j *Client) GetBuild(jobName string, number int64) (*Build, error) {
 	return build, nil
 }
 
-func (j *Client) GetAllNodes() ([]*Node, error) {
+func (c *Client) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
 
 	qr := map[string]string{
 		"depth": "1",
 	}
 
-	_, err := j.Requester.GetJSON("/computer", computers, qr)
+	_, err := c.Requester.GetJSON("/computer", computers, qr)
 	if err != nil {
 		return nil, err
 	}
 
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = &Node{Client: j, Raw: node, Base: "/computer/" + node.DisplayName}
+		nodes[i] = &Node{Client: c, Raw: node, Base: "/computer/" + node.DisplayName}
 	}
 
 	return nodes, nil
@@ -156,8 +156,8 @@ func (j *Client) GetAllNodes() ([]*Node, error) {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Client) GetAllBuildIds(job string) ([]JobBuild, error) {
-	jobObj, err := j.GetJob(job)
+func (c *Client) GetAllBuildIds(job string) ([]JobBuild, error) {
+	jobObj, err := c.GetJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -166,9 +166,9 @@ func (j *Client) GetAllBuildIds(job string) ([]JobBuild, error) {
 
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
-func (j *Client) GetAllJobNames() ([]InnerJob, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Client: j}
-	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+func (c *Client) GetAllJobNames() ([]InnerJob, error) {
+	exec := Executor{Raw: new(ExecutorResponse), Client: c}
+	_, err := c.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {
 		return nil, err
@@ -179,9 +179,9 @@ func (j *Client) GetAllJobNames() ([]InnerJob, error) {
 
 // Get All Possible Job Objects.
 // Each job will be queried.
-func (j *Client) GetAllJobs() ([]*Job, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Client: j}
-	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+func (c *Client) GetAllJobs() ([]*Job, error) {
+	exec := Executor{Raw: new(ExecutorResponse), Client: c}
+	_, err := c.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (j *Client) GetAllJobs() ([]*Job, error) {
 
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
-		ji, err := j.GetJob(job.Name)
+		ji, err := c.GetJob(job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -199,8 +199,8 @@ func (j *Client) GetAllJobs() ([]*Job, error) {
 }
 
 // Returns a Queue
-func (j *Client) GetQueue() (*Queue, error) {
-	q := &Queue{Client: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
+func (c *Client) GetQueue() (*Queue, error) {
+	q := &Queue{Client: c, Raw: new(queueResponse), Base: c.GetQueueUrl()}
 	_, err := q.Poll()
 	if err != nil {
 		return nil, err
@@ -208,13 +208,13 @@ func (j *Client) GetQueue() (*Queue, error) {
 	return q, nil
 }
 
-func (j *Client) GetQueueUrl() string {
+func (c *Client) GetQueueUrl() string {
 	return "/queue"
 }
 
 // Get Artifact data by Hash
-func (j *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
-	fp := FingerPrint{Client: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
+func (c *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
+	fp := FingerPrint{Client: c, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	return fp.GetInfo()
 }
 
@@ -241,8 +241,8 @@ func (j *Client) HasPlugin(name string) (*Plugin, error) {
 }
 
 // Verify FingerPrint
-func (j *Client) ValidateFingerPrint(id string) (bool, error) {
-	fp := FingerPrint{Client: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
+func (c *Client) ValidateFingerPrint(id string) (bool, error) {
+	fp := FingerPrint{Client: c, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	valid, err := fp.Valid()
 	if err != nil {
 		return false, err
@@ -253,9 +253,9 @@ func (j *Client) ValidateFingerPrint(id string) (bool, error) {
 	return false, nil
 }
 
-func (j *Client) GetView(name string) (*View, error) {
+func (c *Client) GetView(name string) (*View, error) {
 	url := "/view/" + name
-	view := View{Client: j, Raw: new(ViewResponse), Base: url}
+	view := View{Client: c, Raw: new(ViewResponse), Base: url}
 	_, err := view.Poll()
 	if err != nil {
 		return nil, err
@@ -263,14 +263,14 @@ func (j *Client) GetView(name string) (*View, error) {
 	return &view, nil
 }
 
-func (j *Client) GetAllViews() ([]*View, error) {
-	_, err := j.Poll()
+func (c *Client) GetAllViews() ([]*View, error) {
+	_, err := c.Poll()
 	if err != nil {
 		return nil, err
 	}
-	views := make([]*View, len(j.Raw.Views))
-	for i, v := range j.Raw.Views {
-		views[i], _ = j.GetView(v.Name)
+	views := make([]*View, len(c.Raw.Views))
+	for i, v := range c.Raw.Views {
+		views[i], _ = c.GetView(v.Name)
 	}
 	return views, nil
 }
@@ -285,8 +285,8 @@ func (j *Client) GetAllViews() ([]*View, error) {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-func (j *Client) CreateView(name string, viewType string) (*View, error) {
-	view := &View{Client: j, Raw: new(ViewResponse), Base: "/view/" + name}
+func (c *Client) CreateView(name string, viewType string) (*View, error) {
+	view := &View{Client: c, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
@@ -297,20 +297,20 @@ func (j *Client) CreateView(name string, viewType string) (*View, error) {
 			"mode": viewType,
 		}),
 	}
-	r, err := j.Requester.Post(endpoint, nil, view.Raw, data)
+	r, err := c.Requester.Post(endpoint, nil, view.Raw, data)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if r.StatusCode == 200 {
-		return j.GetView(name)
+		return c.GetView(name)
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
-func (j *Client) Poll() (int, error) {
-	resp, err := j.Requester.GetJSON("/", j.Raw, nil)
+func (c *Client) Poll() (int, error) {
+	resp, err := c.Requester.GetJSON("/", c.Raw, nil)
 	if err != nil {
 		return 0, err
 	}

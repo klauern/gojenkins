@@ -235,7 +235,7 @@ func (n *Node) GetLogText() (string, error) {
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
-func (j *Client) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
+func (c *Client) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
 	params := map[string]string{"method": "JNLPLauncher"}
 
 	if len(options) > 0 {
@@ -273,7 +273,7 @@ func (j *Client) CreateNode(name string, numExecutors int, description string, r
 		return nil, errors.New("launcher method not supported")
 	}
 
-	node := &Node{Client: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	node := &Node{Client: c, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
@@ -293,7 +293,7 @@ func (j *Client) CreateNode(name string, numExecutors int, description string, r
 		}),
 	}
 
-	resp, err := j.Requester.Post("/computer/doCreateItem", nil, nil, qr)
+	resp, err := c.Requester.Post("/computer/doCreateItem", nil, nil, qr)
 
 	if err != nil {
 		return nil, err

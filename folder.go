@@ -80,8 +80,8 @@ func (f *Folder) Poll() (int, error) {
 // Create a new folder
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
-func (j *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
-	folderObj := &Folder{Client: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
+func (c *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
+	folderObj := &Folder{Client: c, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
 	folder, err := folderObj.Create(name)
 	if err != nil {
 		return nil, err
@@ -90,8 +90,8 @@ func (j *Client) CreateFolder(name string, parents ...string) (*Folder, error) {
 }
 
 
-func (j *Client) GetFolder(id string, parents ...string) (*Folder, error) {
-	folder := Folder{Client: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
+func (c *Client) GetFolder(id string, parents ...string) (*Folder, error) {
+	folder := Folder{Client: c, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
 	status, err := folder.Poll()
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling folder: %v", err)

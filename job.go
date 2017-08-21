@@ -527,8 +527,8 @@ func (j *Job) History() ([]*History, error) {
 
 // Create a new job in the folder
 // Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
-func (j *Client) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
-	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
+func (c *Client) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
+	jobObj := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
 	qr := map[string]string{
 		"name": jobName,
 	}
@@ -543,14 +543,14 @@ func (j *Client) CreateJobInFolder(config string, jobName string, parentIDs ...s
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
 // e.g jenkins.CreateJob("<config></config>","newJobName")
-func (j *Client) CreateJob(config string, options ...interface{}) (*Job, error) {
+func (c *Client) CreateJob(config string, options ...interface{}) (*Job, error) {
 	qr := make(map[string]string)
 	if len(options) > 0 {
 		qr["name"] = options[0].(string)
 	} else {
 		return nil, errors.New("Error Creating Job, job name is missing")
 	}
-	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
+	jobObj := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
 	job, err := jobObj.Create(config, qr)
 	if err != nil {
 		return nil, err
@@ -560,16 +560,16 @@ func (j *Client) CreateJob(config string, options ...interface{}) (*Job, error) 
 
 // Rename a job.
 // First parameter job old name, Second parameter job new name.
-func (j *Client) RenameJob(job string, name string) *Job {
-	jobObj := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + job}
+func (c *Client) RenameJob(job string, name string) *Job {
+	jobObj := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
 
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
-func (j *Client) CopyJob(copyFrom string, newName string) (*Job, error) {
-	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
+func (c *Client) CopyJob(copyFrom string, newName string) (*Job, error) {
+	job := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + copyFrom}
 	_, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -578,15 +578,15 @@ func (j *Client) CopyJob(copyFrom string, newName string) (*Job, error) {
 }
 
 // Delete a job.
-func (j *Client) DeleteJob(name string) (bool, error) {
-	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + name}
+func (c *Client) DeleteJob(name string) (bool, error) {
+	job := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
-func (j *Client) BuildJob(name string, options ...interface{}) (int64, error) {
-	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + name}
+func (c *Client) BuildJob(name string, options ...interface{}) (int64, error) {
+	job := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
@@ -594,8 +594,8 @@ func (j *Client) BuildJob(name string, options ...interface{}) (int64, error) {
 	return job.InvokeSimple(params)
 }
 
-func (j *Client) GetJob(id string, parentIDs ...string) (*Job, error) {
-	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
+func (c *Client) GetJob(id string, parentIDs ...string) (*Job, error) {
+	job := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -606,8 +606,8 @@ func (j *Client) GetJob(id string, parentIDs ...string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Client) GetSubJob(parentId string, childId string) (*Job, error) {
-	job := Job{Client: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
+func (c *Client) GetSubJob(parentId string, childId string) (*Job, error) {
+	job := Job{Client: c, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling job: %v", err)
