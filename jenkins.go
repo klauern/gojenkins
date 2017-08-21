@@ -167,7 +167,7 @@ func (j *Client) GetAllBuildIds(job string) ([]JobBuild, error) {
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
 func (j *Client) GetAllJobNames() ([]InnerJob, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
+	exec := Executor{Raw: new(ExecutorResponse), Client: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {
@@ -180,7 +180,7 @@ func (j *Client) GetAllJobNames() ([]InnerJob, error) {
 // Get All Possible Job Objects.
 // Each job will be queried.
 func (j *Client) GetAllJobs() ([]*Job, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
+	exec := Executor{Raw: new(ExecutorResponse), Client: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {

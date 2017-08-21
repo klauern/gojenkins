@@ -15,8 +15,8 @@
 package gojenkins
 
 type Executor struct {
-	Raw     *ExecutorResponse
-	Jenkins *Client
+	Raw    *ExecutorResponse
+	Client *Client
 }
 type ViewData struct {
 	Name string `json:"name"`
