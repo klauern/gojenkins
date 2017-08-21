@@ -73,3 +73,26 @@ func (p *Plugins) Poll() (int, error) {
 	}
 	return response.StatusCode, nil
 }
+
+// HasPlugin will check if the plugin is installed on the server.
+// Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
+func (c *Client) HasPlugin(name string) (*Plugin, error) {
+	p, err := c.GetPlugins(1)
+
+	if err != nil {
+		return nil, err
+	}
+	return p.Contains(name), nil
+}
+
+// GetPlugins returns the list of all plugins installed on the Jenkins server.
+// You can supply depth parameter to limit how much data is returned.
+func (c *Client) GetPlugins(depth int) (*Plugins, error) {
+	p := Plugins{Client: c, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
+	_, err := p.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+

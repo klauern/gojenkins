@@ -218,28 +218,6 @@ func (c *Client) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	return fp.GetInfo()
 }
 
-// Returns the list of all plugins installed on the Jenkins server.
-// You can supply depth parameter, to limit how much data is returned.
-func (j *Client) GetPlugins(depth int) (*Plugins, error) {
-	p := Plugins{Client: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
-	_, err := p.Poll()
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
-}
-
-// Check if the plugin is installed on the server.
-// Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
-func (j *Client) HasPlugin(name string) (*Plugin, error) {
-	p, err := j.GetPlugins(1)
-
-	if err != nil {
-		return nil, err
-	}
-	return p.Contains(name), nil
-}
-
 // Verify FingerPrint
 func (c *Client) ValidateFingerPrint(id string) (bool, error) {
 	fp := FingerPrint{Client: c, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
