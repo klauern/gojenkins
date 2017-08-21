@@ -116,7 +116,7 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Client, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
+	build := Build{Client: j.Client, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
@@ -143,11 +143,11 @@ func (j *Job) getBuildByType(buildType string) (*Build, error) {
 		panic("No Such Build")
 	}
 	build := Build{
-		Jenkins: j.Client,
-		Depth:   1,
-		Job:     j,
-		Raw:     new(BuildResponse),
-		Base:    j.Base + "/" + number}
+		Client: j.Client,
+		Depth:  1,
+		Job:    j,
+		Raw:    new(BuildResponse),
+		Base:   j.Base + "/" + number}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err

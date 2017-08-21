@@ -24,11 +24,11 @@ import (
 )
 
 type Build struct {
-	Raw     *BuildResponse
-	Job     *Job
-	Jenkins *Client
-	Base    string
-	Depth   int
+	Raw    *BuildResponse
+	Job    *Job
+	Client *Client
+	Base   string
+	Depth  int
 }
 
 type parameter struct {
@@ -181,7 +181,7 @@ func (b *Build) GetArtifacts() []Artifact {
 	artifacts := make([]Artifact, len(b.Raw.Artifacts))
 	for i, artifact := range b.Raw.Artifacts {
 		artifacts[i] = Artifact{
-			Jenkins:  b.Jenkins,
+			Jenkins:  b.Client,
 			Build:    b,
 			FileName: artifact.FileName,
 			Path:     b.Base + "/artifact/" + artifact.RelativePath,
@@ -196,7 +196,7 @@ func (b *Build) GetCulprits() []culprit {
 
 func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
-		response, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
+		response, err := b.Client.Requester.Post(b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err
 		}
@@ -208,7 +208,7 @@ func (b *Build) Stop() (bool, error) {
 func (b *Build) GetConsoleOutput() string {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(url, &content, nil)
+	b.Client.Requester.GetXML(url, &content, nil)
 	return content
 }
 
@@ -239,7 +239,7 @@ func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
 		EnvMap map[string]string `json:"envMap"`
 	}
 	endpoint := b.Base + "/injectedEnvVars"
-	_, err := b.Jenkins.Requester.GetJSON(endpoint, &envVars, nil)
+	_, err := b.Client.Requester.GetJSON(endpoint, &envVars, nil)
 	if err != nil {
 		return envVars.EnvMap, err
 	}
@@ -293,7 +293,7 @@ func (b *Build) GetAllFingerPrints() []*FingerPrint {
 	b.Poll(3)
 	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
 	for i, f := range b.Raw.FingerPrint {
-		result[i] = &FingerPrint{Client: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
+		result[i] = &FingerPrint{Client: b.Client, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
 	}
 	return result
 }
@@ -305,7 +305,7 @@ func (b *Build) GetUpstreamJob() (*Job, error) {
 	}
 	if len(causes) > 0 {
 		if job, ok := causes[0]["upstreamProject"]; ok {
-			return b.Jenkins.GetJob(job.(string))
+			return b.Client.GetJob(job.(string))
 		}
 	}
 	return nil, errors.New("Unable to get Upstream Job")
@@ -353,7 +353,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	r, _ := regexp.Compile(`job/(.*?)/(.*?)/(\d+)/`)
 
 	for i, run := range runs {
-		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
+		result[i] = &Build{Client: b.Client, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
 		result[i].Poll()
 	}
 	return result, nil
@@ -364,7 +364,7 @@ func (b *Build) GetResultSet() (*TestResult, error) {
 	url := b.Base + "/testReport"
 	var report TestResult
 
-	_, err := b.Jenkins.Requester.GetJSON(url, &report, nil)
+	_, err := b.Client.Requester.GetJSON(url, &report, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +429,7 @@ func (b *Build) IsRunning() bool {
 func (b *Build) SetDescription(description string) error {
 	data := url.Values{}
 	data.Set("description", description)
-	_, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
+	_, err := b.Client.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
 	return err
 }
 
@@ -455,7 +455,7 @@ func (b *Build) Poll(options ...interface{}) (int, error) {
 	qr := map[string]string{
 		"depth": depth,
 	}
-	response, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	response, err := b.Client.Requester.GetJSON(b.Base, b.Raw, qr)
 	if err != nil {
 		return 0, err
 	}
