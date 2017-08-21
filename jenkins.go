@@ -255,7 +255,7 @@ func (j *Client) ValidateFingerPrint(id string) (bool, error) {
 
 func (j *Client) GetView(name string) (*View, error) {
 	url := "/view/" + name
-	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
+	view := View{Client: j, Raw: new(ViewResponse), Base: url}
 	_, err := view.Poll()
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func (j *Client) GetAllViews() ([]*View, error) {
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Client) CreateView(name string, viewType string) (*View, error) {
-	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
+	view := &View{Client: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,

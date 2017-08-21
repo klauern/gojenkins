@@ -20,9 +20,9 @@ import (
 )
 
 type View struct {
-	Raw     *ViewResponse
-	Jenkins *Client
-	Base    string
+	Raw    *ViewResponse
+	Client *Client
+	Base   string
 }
 
 type ViewResponse struct {
@@ -45,7 +45,7 @@ var (
 func (v *View) AddJob(name string) (bool, error) {
 	url := "/addJobToView"
 	qr := map[string]string{"name": name}
-	resp, err := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
+	resp, err := v.Client.Requester.Post(v.Base+url, nil, nil, qr)
 	if err != nil {
 		return false, err
 	}
@@ -59,7 +59,7 @@ func (v *View) AddJob(name string) (bool, error) {
 func (v *View) DeleteJob(name string) (bool, error) {
 	url := "/removeJobFromView"
 	qr := map[string]string{"name": name}
-	resp, err := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
+	resp, err := v.Client.Requester.Post(v.Base+url, nil, nil, qr)
 	if err != nil {
 		return false, err
 	}
@@ -86,7 +86,7 @@ func (v *View) GetUrl() string {
 }
 
 func (v *View) Poll() (int, error) {
-	response, err := v.Jenkins.Requester.GetJSON(v.Base, v.Raw, nil)
+	response, err := v.Client.Requester.GetJSON(v.Base, v.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
